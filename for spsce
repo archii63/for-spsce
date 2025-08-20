@@ -13,7 +13,13 @@
       "commitType": "docs",
   "commitConvention": "angular",
       
-    
+    "login": 
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+    },
   "projectName": "bitcoin-circle-stark",
   "projectOwner": "Bitcoin-Wildlife-Sanctuary",
   "files": [
