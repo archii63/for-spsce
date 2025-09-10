@@ -37,10 +37,9 @@
 "AbdelStark",
     },
     {
-      "commitType": "docs",
+      ""commitType": "docs",
   "commitConvention": "angular",
   "contributorsPerLine": 7,
-        "code"
       ]
     "name": "Abdel @ StarkWare ",
       "avatar_url": "https://avatars.githubusercontent.com/u/45264458?v=4",
