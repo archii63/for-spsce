@@ -15,7 +15,9 @@
     {
       "commitType": "docs",
   "commitConvention": "angular",
-      
+       "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
     "login": 
   "commitType": "docs",
   "commitConvention": "angular",
