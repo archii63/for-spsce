@@ -1,0 +1,243 @@
+remote-door-controller/
+├─ README.md
+├─ LICENSE
+├─ server/
+│  ├─ app.py
+│  ├─ requirements.txt
+│  └─ config.example.env
+├─ client/
+│  └─ trigger_close.sh
+└─ microcontroller/
+   └─ esp32_mqtt_close.ino
+# Remote Door Controller
+
+Example safe setup to send an authenticated "close door" command to an automatic door using:
+
+- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
+- Client example to request the server to issue a close command.
+
+**Important:** This repo is an educational example. Do *not* use this to bypass locks or access systems without permission. Follow all safety, security, and local regulations.
+
+Features:
+- JWT authentication on server
+- MQTT with username/password (use TLS in production)
+- Basic audit log
+# Example configuration - copy to .env and fill secrets
+FLASK_SECRET_KEY=replace_with_random_secret
+JWT_SECRET_KEY=replace_with_jwt_secret
+MQTT_BROKER=broker.example.com
+MQTT_PORT=8883            # 8883 for TLS
+MQTT_USERNAME=mqtt_user
+MQTT_PASSWORD=mqtt_password
+MQTT_TOPIC=home/door/command
+AUDIT_LOG=server/audit.log
+Flask==2.3.*
+PyJWT==2.*
+paho-mqtt==1.6.*
+python-dotenv==1.0.*
+Flask-JWT-Extended==4.*
+"""
+Simple Flask server that authenticates an operator and publishes a "close" command
+to an MQTT topic. Designed as a minimal, **secure-by-design** example.
+
+Important production notes:
+- Serve Flask over HTTPS (use a reverse proxy like nginx / TLS).
+- Use MQTT with TLS and strong credentials or client certs.
+- Add RBAC, rate-limiting, monitoring, and physical safety checks before actual actuation.
+"""
+
+import os
+from flask import Flask, request, jsonify
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required, get_jwt_identity
+)
+from dotenv import load_dotenv
+import paho.mqtt.client as mqtt
+import logging
+from datetime import datetime, timedelta
+
+load_dotenv()  # loads variables from .env if present
+
+app = Flask(__name__)
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-jwt-secret")
+jwt = JWTManager(app)
+
+MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
+MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "home/door/command")
+AUDIT_LOG = os.getenv("AUDIT_LOG", "audit.log")
+
+# Configure audit logger
+audit_logger = logging.getLogger("audit")
+audit_logger.setLevel(logging.INFO)
+handler = logging.FileHandler(AUDIT_LOG)
+handler.setFormatter(logging.Formatter("%(message)s"))
+audit_logger.addHandler(handler)
+
+# Configure MQTT client (publisher)
+mqtt_client = mqtt.Client(client_id="door-server-publisher")
+if MQTT_USERNAME:
+    mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+# For TLS: mqtt_client.tls_set(...)  # configure CA bundle and certs in production
+mqtt_client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
+mqtt_client.loop_start()
+
+
+# Very simple in-memory user store for demo ONLY
+USERS = {
+    "admin": {"password": "strongpassword", "role": "operator"},
+    # In production, store hashed passwords & manage roles centrally
+}
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+    user = USERS.get(username)
+    if not user or user.get("password") != password:
+        return jsonify({"msg": "Bad username or password"}), 401
+    # Create short-lived token (e.g., 5 minutes)
+    access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=5))
+    return jsonify(access_token=access_token)
+
+
+@app.route("/door/close", methods=["POST"])
+@jwt_required()
+def close_door():
+    identity = get_jwt_identity()
+    # Basic server-side checks before publishing:
+    # - Verify operator role (omitted here, but check roles/permissions)
+    # - Check recent command timestamp to avoid repeated actuation
+    # - Check external safety sensor (if available)
+    # For demonstration, we publish a simple JSON command.
+    command = {"action": "close", "requested_by": identity, "ts": datetime.utcnow().isoformat() + "Z"}
+    # Publish to MQTT
+    mqtt_client.publish(MQTT_TOPIC, payload=str(command), qos=1)
+    # Audit log
+    audit_logger.info(f"{datetime.utcnow().isoformat()}Z | CLOSE_REQUEST | user={identity} | payload={command}")
+    return jsonify({"status": "command_published", "topic": MQTT_TOPIC}), 200
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "mqtt_connected": mqtt_client.is_connected()})
+
+
+if __name__ == "__main__":
+    app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret")
+    app.run(host="0.0.0.0", port=5000, debug=False)
+#!/usr/bin/env bash
+# Example client script: get JWT and request remote close
+# Requires: curl, jq
+SERVER="https://your-server.example.com"   # HTTPS!
+USER="admin"
+PASSWORD="strongpassword"
+
+# Obtain token
+TOKEN=$(curl -s -X POST "${SERVER}/login" -H "Content-Type: application/json" \
+  -d "{\"username\":\"${USER}\",\"password\":\"${PASSWORD}\"}" | jq -r .access_token)
+
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+  echo "Failed to get token"
+  exit 1
+fi
+
+# Send close request
+curl -s -X POST "${SERVER}/door/close" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq .
+/*
+ESP32 example: subscribe to MQTT topic and actuate RELAY_PIN on "close" command.
+
+Important safety notes:
+- Add physical safety checks (e.g. motor load sensors, obstacle sensors) before changing relay states.
+- Use MQTT over TLS in production. Store credentials securely.
+*/
+
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+const char* ssid = "YOUR_WIFI_SSID";
+const char* wifi_password = "YOUR_WIFI_PASSWORD";
+
+const char* mqtt_server = "broker.example.com";
+const int mqtt_port = 8883; // use 8883 for TLS brokers
+const char* mqtt_user = "mqtt_user";
+const char* mqtt_pass = "mqtt_password";
+const char* mqtt_topic = "home/door/command";
+
+const int RELAY_PIN = 5; // GPIO pin connected to relay (example)
+
+WiFiClientSecure wifiClient; // for TLS
+PubSubClient client(wifiClient);
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Convert payload to string safely
+  String message;
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  Serial.print("Received: ");
+  Serial.println(message);
+
+  // Very simple check for action "close"
+  if (message.indexOf("\"action\": \"close\"") >= 0 || message.indexOf("'action': 'close'") >= 0 || message.indexOf("close") >= 0) {
+    // Before actuating:
+    // - check safety sensors here (not implemented)
+    // - ensure no recent duplicate actuation
+    digitalWrite(RELAY_PIN, HIGH); // activate relay (assumes HIGH closes)
+    delay(1000); // pulse time - adjust as needed for your actuator
+    digitalWrite(RELAY_PIN, LOW);
+    Serial.println("Door close command executed (relay pulsed).");
+  }
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect("esp32-door", mqtt_user, mqtt_pass)) {
+      Serial.println("connected");
+      client.subscribe(mqtt_topic);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+  Serial.begin(115200);
+  delay(100);
+
+  WiFi.begin(ssid, wifi_password);
+  Serial.print("Connecting WiFi ");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(" connected");
+
+  // If your broker uses a CA, call wifiClient.setCACert(...) or setInsecure(false)
+  // For demonstration only (INSECURE) — DO NOT USE setInsecure(true) in production
+  // wifiClient.setCACert(ca_cert); // load CA cert as needed
+
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
+}
+
+void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+}
