@@ -241,3 +241,5 @@ void loop() {
   }
   client.loop();
 }
+Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
