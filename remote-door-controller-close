@@ -243,3 +243,19 @@ void loop() {
 }
 Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
 - Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
+# Simple Greeting Project
+
+This is a minimal Python project that prints a greeting message based on user input.  
+You can use this repository as a template for learning how to publish code on GitHub.
+
+## Features
+- Clean and simple Python code
+- Example of a function with documentation
+- Ready to extend and customize
+
+## Requirements
+- Python 3.8 or higher
+
+## How to Run
+```bash
+python main.py
