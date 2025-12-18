@@ -18,7 +18,14 @@ Example safe setup to send an authenticated "close door" command to an automatic
 - Client example to request the server to issue a close command.
 
 **Important:** This repo is an educational example. Do *not* use this to bypass locks or access systems without permission. Follow all safety, security, and local regulations.
-
+MQTT_PASSWORD=mqtt_password
+MQTT_TOPIC=home/door/command
+AUDIT_LOG=server/audit.log
+Flask==2.3.*
+PyJWT==2.*
+paho-mqtt==1.6.*
+python-dotenv==1.0.*
+Flask-JWT-Extended==4.*
 Features:
 - JWT authentication on server
 - MQTT with username/password (use TLS in production)
@@ -29,14 +36,7 @@ JWT_SECRET_KEY=replace_with_jwt_secret
 MQTT_BROKER=broker.example.com
 MQTT_PORT=8883            # 8883 for TLS
 MQTT_USERNAME=mqtt_user
-MQTT_PASSWORD=mqtt_password
-MQTT_TOPIC=home/door/command
-AUDIT_LOG=server/audit.log
-Flask==2.3.*
-PyJWT==2.*
-paho-mqtt==1.6.*
-python-dotenv==1.0.*
-Flask-JWT-Extended==4.*
+
 """
 Simple Flask server that authenticates an operator and publishes a "close" command
 to an MQTT topic. Designed as a minimal, **secure-by-design** example.
