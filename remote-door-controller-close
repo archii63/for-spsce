@@ -12,7 +12,9 @@ remote-door-controller/
 # Remote Door Controller
 
 Example safe setup to send an authenticated "close door" command to an automatic door using:
-
+- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
+- Client example to request the server to issue a close command.
 - Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
 - Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
 - Client example to request the server to issue a close command.
