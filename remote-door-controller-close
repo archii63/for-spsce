@@ -45,7 +45,8 @@ to an MQTT topic. Designed as a minimal, **secure-by-design** example.
 - Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
 - Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
 Important production notes:
-- Serve Flask over HTTPS (use a reverse proxy like nginx / TLS).
+- - Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.Serve Flask over HTTPS (use a reverse proxy like nginx / TLS).
 - Use MQTT with TLS and strong credentials or client certs.
 - Add RBAC, rate-limiting, monitoring, and physical safety checks before actual actuation.
 """
