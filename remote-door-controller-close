@@ -11,13 +11,6 @@ remote-door-controller/
    └─ esp32_mqtt_close.ino
 # Remote Door Controller
 
-Example safe setup to send an authenticated "close door" command to an automatic door using:
-- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
-- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
-- Client example to request the server to issue a close command.
-- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
-- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
-- Client example to request the server to issue a close command.
 
 **Important:** This repo is an educational example. Do *not* use this to bypass locks or access systems without permission. Follow all safety, security, and local regulations.
 MQTT_PASSWORD=mqtt_password
@@ -96,6 +89,13 @@ USERS = {
     # In production, store hashed passwords & manage roles centrally
 }
 
+Example safe setup to send an authenticated "close door" command to an automatic door using:
+- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
+- Client example to request the server to issue a close command.
+- Secure server (Python + Flask) that authenticates operators and publishes an MQTT command.
+- Microcontroller (ESP32 / Arduino) that subscribes to MQTT topic and actuates a relay.
+- Client example to request the server to issue a close command.
 
 @app.route("/login", methods=["POST"])
 def login():
